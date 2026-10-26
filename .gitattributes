@@ -1,0 +1,5 @@
+# Finales de línea LF en el repo, igual que .editorconfig (evita diffs ruidosos entre Windows/Linux/macOS)
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
