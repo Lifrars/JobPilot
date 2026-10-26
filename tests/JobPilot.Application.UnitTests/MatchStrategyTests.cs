@@ -2,17 +2,19 @@ using JobPilot.Application.JobApplications.Matching;
 using JobPilot.Domain.Companies;
 using JobPilot.Domain.JobApplications;
 using JobPilot.Domain.Resumes;
+using JobPilot.Domain.Users;
 
 namespace JobPilot.Application.UnitTests;
 
 public sealed class MatchStrategyTests
 {
     private static readonly DateTimeOffset Now = DateTimeOffset.UnixEpoch;
+    private static readonly UserId Owner = UserId.From(Guid.NewGuid());
 
     private static JobApplication Job(string description) =>
-        JobApplication.Create(CompanyId.New(), "Backend Developer", null, description, null, WorkMode.Remote, Now).Value;
+        JobApplication.Create(Owner, CompanyId.New(), "Backend Developer", null, description, null, WorkMode.Remote, Now).Value;
 
-    private static Resume Cv(string content) => Resume.Create("CV", content, Now).Value;
+    private static Resume Cv(string content) => Resume.Create(Owner, "CV", content, Now).Value;
 
     [Theory]
     [InlineData("I work with C# daily", "C#", true)]

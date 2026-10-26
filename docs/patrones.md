@@ -60,6 +60,11 @@ Los filtros reutilizables (`JobApplicationsFilterSpec`, `StaleApplicationsSpec`)
 - **Solución:** `InsertOutboxMessagesInterceptor` guarda los eventos en la **misma transacción** y `OutboxProcessor` (un BackgroundService) los publica después.
 - **Trade-off:** consistencia eventual (unos segundos de retraso). Con varias instancias hay que leer con `FOR UPDATE SKIP LOCKED`, y los handlers deben ser idempotentes.
 
+### Multi-tenancy con Global Query Filter: `src/JobPilot.Infrastructure/Persistence/JobPilotDbContext.cs`
+- **Problema:** cada usuario debe ver solo sus datos, y filtrar a mano en cada consulta se olvida tarde o temprano.
+- **Solución:** los aggregates implementan `IOwnedByUser`. El DbContext recorre el modelo y, con un **método genérico invocado por reflexión** (`ApplyOwnerFilter<TEntity>`), registra el filtro con nombre `OwnerFilter`. El usuario actual se evalúa en cada consulta como parámetro SQL.
+- **Trade-off:** no protege el SQL crudo ni los procesos sin usuario (ver ADR 0005). Row-Level Security en PostgreSQL sería una segunda línea de defensa.
+
 ### Result pattern — `src/JobPilot.Domain/Abstractions/Result.cs`
 Los errores de negocio son valores (`Error`) y no excepciones: hace explícito qué puede fallar y es más barato. `ApiResults.Problem` los traduce a ProblemDetails (RFC 9457).
 

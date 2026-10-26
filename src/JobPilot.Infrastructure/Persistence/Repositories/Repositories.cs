@@ -1,5 +1,6 @@
 using JobPilot.Domain.Abstractions;
 using JobPilot.Domain.JobApplications;
+using JobPilot.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 using Pgvector;
 
@@ -52,6 +53,7 @@ internal sealed class JobApplicationRepository(JobPilotDbContext context)
     }
 
     public async Task<IReadOnlyList<Scored<JobApplication>>> SearchSimilarAsync(
+        UserId ownerId,
         float[] embedding,
         int take,
         CancellationToken cancellationToken = default)
@@ -60,11 +62,12 @@ internal sealed class JobApplicationRepository(JobPilotDbContext context)
 
         // <=> es el operador de distancia coseno de pgvector (0 = idéntico, 2 = opuesto).
         // SQL interpolado = parámetros seguros, sin inyección SQL.
+        // ¡Ojo! El SQL crudo NO aplica los query filters globales: el filtro por dueño va explícito.
         var hits = await Context.Database
             .SqlQuery<SimilarityHit>($"""
                 SELECT "Id", "Embedding" <=> {vector} AS "Distance"
                 FROM "JobApplications"
-                WHERE "Embedding" IS NOT NULL
+                WHERE "OwnerId" = {ownerId.Value} AND "Embedding" IS NOT NULL
                 ORDER BY "Embedding" <=> {vector}
                 LIMIT {take}
                 """)

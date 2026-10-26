@@ -1,5 +1,6 @@
 using FluentValidation;
 using JobPilot.Application.Abstractions.AI;
+using JobPilot.Application.Abstractions.Authentication;
 using JobPilot.Application.Abstractions.Messaging;
 using JobPilot.Application.JobApplications.Matching;
 using JobPilot.Domain.Abstractions;
@@ -74,7 +75,8 @@ internal sealed class SearchJobApplicationsQueryValidator : AbstractValidator<Se
 
 internal sealed class SearchJobApplicationsQueryHandler(
     IJobApplicationRepository applications,
-    IEmbeddingService embeddings)
+    IEmbeddingService embeddings,
+    IUserContext userContext)
     : IQueryHandler<SearchJobApplicationsQuery, IReadOnlyList<SearchHitResponse>>
 {
     public async Task<Result<IReadOnlyList<SearchHitResponse>>> Handle(SearchJobApplicationsQuery query, CancellationToken cancellationToken)
@@ -85,7 +87,7 @@ internal sealed class SearchJobApplicationsQueryHandler(
             return vector.Error;
         }
 
-        var hits = await applications.SearchSimilarAsync(vector.Value, query.Take, cancellationToken);
+        var hits = await applications.SearchSimilarAsync(userContext.UserId, vector.Value, query.Take, cancellationToken);
 
         return Result.Success<IReadOnlyList<SearchHitResponse>>(
             [.. hits.Select(hit => new SearchHitResponse(hit.Item.Id.Value, hit.Item.Title, hit.Item.Status.Name, Math.Round(hit.Score, 4)))]);

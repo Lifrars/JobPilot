@@ -1,6 +1,7 @@
 using JobPilot.Application.JobApplications;
 using JobPilot.Domain.Companies;
 using JobPilot.Domain.JobApplications;
+using JobPilot.Domain.Users;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 
@@ -14,7 +15,7 @@ public sealed class JobApplicationHandlerTests
     [Fact]
     public async Task ChangeStatus_UsesTimeProviderAndReturnsAllowedTransitions()
     {
-        var application = JobApplication.Create(CompanyId.New(), "Dev", null, null, null, WorkMode.Remote, _time.GetUtcNow()).Value;
+        var application = JobApplication.Create(UserId.From(Guid.NewGuid()), CompanyId.New(), "Dev", null, null, null, WorkMode.Remote, _time.GetUtcNow()).Value;
         _applications.GetByIdAsync(application.Id, Arg.Any<CancellationToken>()).Returns(application);
         var handler = new ChangeJobApplicationStatusCommandHandler(_applications, _time);
         _time.Advance(TimeSpan.FromDays(1));

@@ -1,14 +1,16 @@
 using JobPilot.Domain.Companies;
 using JobPilot.Domain.JobApplications;
+using JobPilot.Domain.Users;
 
 namespace JobPilot.Domain.UnitTests;
 
 public sealed class JobApplicationTests
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 26, 12, 0, 0, TimeSpan.Zero);
+    private static readonly UserId Owner = UserId.From(Guid.NewGuid());
 
     private static JobApplication NewApplication() =>
-        JobApplication.Create(CompanyId.New(), "Backend Developer .NET", null, "C#, PostgreSQL", null, WorkMode.Remote, Now).Value;
+        JobApplication.Create(Owner, CompanyId.New(), "Backend Developer .NET", null, "C#, PostgreSQL", null, WorkMode.Remote, Now).Value;
 
     private static JobApplication InStatus(params ApplicationStatus[] path)
     {
@@ -24,7 +26,7 @@ public sealed class JobApplicationTests
     [Fact]
     public void Create_WithEmptyTitle_ReturnsTitleRequired()
     {
-        var result = JobApplication.Create(CompanyId.New(), "  ", null, null, null, WorkMode.Unknown, Now);
+        var result = JobApplication.Create(Owner, CompanyId.New(), "  ", null, null, null, WorkMode.Unknown, Now);
 
         result.IsFailure.ShouldBeTrue();
         result.Error.ShouldBe(JobApplicationErrors.TitleRequired);
@@ -37,14 +39,14 @@ public sealed class JobApplicationTests
     [InlineData("not a url")]
     public void Create_WithNonHttpUrl_ReturnsInvalidUrl(string url)
     {
-        var result = JobApplication.Create(CompanyId.New(), "Dev", url, null, null, WorkMode.Unknown, Now);
+        var result = JobApplication.Create(Owner, CompanyId.New(), "Dev", url, null, null, WorkMode.Unknown, Now);
 
         result.Error.ShouldBe(JobApplicationErrors.InvalidUrl);
     }
 
     [Fact]
     public void Create_WithHttpsUrl_Succeeds() =>
-        JobApplication.Create(CompanyId.New(), "Dev", "https://jobs.example.com/1", null, null, WorkMode.Unknown, Now)
+        JobApplication.Create(Owner, CompanyId.New(), "Dev", "https://jobs.example.com/1", null, null, WorkMode.Unknown, Now)
             .IsSuccess.ShouldBeTrue();
 
     [Fact]
@@ -53,7 +55,8 @@ public sealed class JobApplicationTests
         var application = NewApplication();
 
         application.Status.ShouldBe(ApplicationStatus.Wishlist);
-        application.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<JobApplicationCreatedDomainEvent>();
+        application.OwnerId.ShouldBe(Owner);
+        application.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<JobApplicationCreatedDomainEvent>().OwnerId.ShouldBe(Owner);
     }
 
     [Fact]

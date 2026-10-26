@@ -1,4 +1,5 @@
 using FluentValidation;
+using JobPilot.Application.Abstractions.Authentication;
 using JobPilot.Application.Abstractions.AI;
 using JobPilot.Application.Abstractions.Messaging;
 using JobPilot.Application.Abstractions.Persistence;
@@ -26,12 +27,12 @@ internal sealed class CreateResumeCommandValidator : AbstractValidator<CreateRes
     }
 }
 
-internal sealed class CreateResumeCommandHandler(IRepository<Resume, ResumeId> resumes, TimeProvider timeProvider)
+internal sealed class CreateResumeCommandHandler(IRepository<Resume, ResumeId> resumes, IUserContext userContext, TimeProvider timeProvider)
     : ICommandHandler<CreateResumeCommand, ResumeResponse>
 {
     public Task<Result<ResumeResponse>> Handle(CreateResumeCommand command, CancellationToken cancellationToken)
     {
-        var result = Resume.Create(command.Name, command.Content, timeProvider.GetUtcNow());
+        var result = Resume.Create(userContext.UserId, command.Name, command.Content, timeProvider.GetUtcNow());
         if (result.IsFailure)
         {
             return Task.FromResult(Result.Failure<ResumeResponse>(result.Error));

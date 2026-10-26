@@ -1,4 +1,5 @@
 using FluentValidation;
+using JobPilot.Application.Abstractions.Authentication;
 using JobPilot.Application.Abstractions.Messaging;
 using JobPilot.Domain.Abstractions;
 using JobPilot.Domain.Companies;
@@ -33,6 +34,7 @@ internal sealed class CreateJobApplicationCommandValidator : AbstractValidator<C
 internal sealed class CreateJobApplicationCommandHandler(
     IJobApplicationRepository applications,
     IRepository<Company, CompanyId> companies,
+    IUserContext userContext,
     TimeProvider timeProvider)
     : ICommandHandler<CreateJobApplicationCommand, JobApplicationResponse>
 {
@@ -57,6 +59,7 @@ internal sealed class CreateJobApplicationCommandHandler(
         }
 
         var result = JobApplication.Create(
+            userContext.UserId,
             companyId,
             command.Title,
             command.PostingUrl,

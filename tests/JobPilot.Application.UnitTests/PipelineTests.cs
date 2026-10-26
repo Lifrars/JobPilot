@@ -1,8 +1,10 @@
+using JobPilot.Application.Abstractions.Authentication;
 using JobPilot.Application.Abstractions.Messaging;
 using JobPilot.Application.Abstractions.Persistence;
 using JobPilot.Application.Companies;
 using JobPilot.Domain.Abstractions;
 using JobPilot.Domain.Companies;
+using JobPilot.Domain.Users;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -18,15 +20,20 @@ public sealed class PipelineTests
 {
     private readonly IRepository<Company, CompanyId> _companies = Substitute.For<IRepository<Company, CompanyId>>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
+    private readonly IUserContext _userContext = Substitute.For<IUserContext>();
+    private readonly UserId _user = UserId.From(Guid.NewGuid());
     private readonly ISender _sender;
 
     public PipelineTests()
     {
+        _userContext.UserId.Returns(_user);
+
         var services = new ServiceCollection()
             .AddSingleton(typeof(ILogger<>), typeof(NullLogger<>))
             .AddApplication()
             .AddSingleton(_companies)
-            .AddSingleton(_unitOfWork);
+            .AddSingleton(_unitOfWork)
+            .AddSingleton(_userContext);
 
         _sender = services.BuildServiceProvider(validateScopes: true).CreateScope().ServiceProvider.GetRequiredService<ISender>();
     }
@@ -54,7 +61,7 @@ public sealed class PipelineTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.Name.ShouldBe("Contoso");
-        _companies.Received(1).Add(Arg.Is<Company>(c => c.Name == "Contoso"));
+        _companies.Received(1).Add(Arg.Is<Company>(c => c.Name == "Contoso" && c.OwnerId == _user));
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 

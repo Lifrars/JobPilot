@@ -32,7 +32,10 @@ dotnet ef migrations add <Nombre> --project src/JobPilot.Infrastructure --startu
 - Handlers `internal sealed`; nunca llaman a `SaveChanges` (lo hace `UnitOfWorkDecorator`).
 - Tiempo vía `TimeProvider`; nunca `DateTime.Now`. Fechas `DateTimeOffset` en UTC.
 - Mapeo manual a DTOs (`ToResponse()`). **No** agregar MediatR, AutoMapper ni FluentAssertions (licencias comerciales).
+- **Multiusuario:** todo aggregate implementa `IOwnedByUser` y recibe `UserId ownerId` en su `Create` (desde `IUserContext`).
+  El query filter `OwnerFilter` se aplica solo; `LayerTests.Aggregates_BelongToAUser` lo exige.
 - Versiones de paquetes solo en `Directory.Packages.props`.
+- Commits: Conventional Commits en inglés, sin trailer `Co-Authored-By`.
 - Código en inglés; documentación y comentarios didácticos en español.
 
 ## Trampas conocidas
@@ -40,6 +43,10 @@ dotnet ef migrations add <Nombre> --project src/JobPilot.Infrastructure --startu
 - IDs generados por el cliente ⇒ `ValueGeneratedNever()` (ya en `EntityConfiguration<,>`), si no EF hace UPDATE en vez de INSERT para hijos nuevos.
 - Npgsql solo acepta `DateTimeOffset` con offset 0 → convertir con `ToUniversalTime()` en el dominio.
 - Los handlers de eventos corren desde el Outbox (asíncrono, ~5 s): los tests deben esperar, no asumir.
+- **SQL crudo (`SqlQuery`/`FromSql`) NO aplica query filters**: filtrar por `OwnerId` explícitamente (ver `SearchSimilarAsync`).
+- **Caché**: claves y tags siempre por usuario (`pipeline-stats:{userId}`); una clave global filtra datos entre usuarios.
+- El Outbox corre sin usuario: usa `CurrentUser.RunAsSystem()` para ver todos los datos. Nunca llamarlo desde código de request.
+- Aspire exige el perfil `https` (el `http` falla sin `ASPIRE_ALLOW_UNSECURED_TRANSPORT`).
 
 ## Más contexto
 - Estándares por capa: `.claude/rules/` (se cargan al tocar esos archivos).

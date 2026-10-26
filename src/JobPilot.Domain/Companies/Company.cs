@@ -1,4 +1,5 @@
 using JobPilot.Domain.Abstractions;
+using JobPilot.Domain.Users;
 
 namespace JobPilot.Domain.Companies;
 
@@ -11,12 +12,13 @@ public readonly record struct CompanyId(Guid Value) : IStronglyTypedId<CompanyId
     public override string ToString() => Value.ToString();
 }
 
-public sealed class Company : AggregateRoot<CompanyId>
+public sealed class Company : AggregateRoot<CompanyId>, IOwnedByUser
 {
     public const int NameMaxLength = 200;
 
-    private Company(CompanyId id, string name, string? website, string? industry, DateTimeOffset createdAt) : base(id)
+    private Company(CompanyId id, UserId ownerId, string name, string? website, string? industry, DateTimeOffset createdAt) : base(id)
     {
+        OwnerId = ownerId;
         Name = name;
         Website = website;
         Industry = industry;
@@ -24,6 +26,8 @@ public sealed class Company : AggregateRoot<CompanyId>
     }
 
     private Company() { }
+
+    public UserId OwnerId { get; private set; }
 
     public string Name { get; private set; } = null!;
 
@@ -34,7 +38,7 @@ public sealed class Company : AggregateRoot<CompanyId>
     public DateTimeOffset CreatedAt { get; private set; }
 
     /// <summary>Factory Method: única forma de crear una Company válida.</summary>
-    public static Result<Company> Create(string name, string? website, string? industry, DateTimeOffset now)
+    public static Result<Company> Create(UserId ownerId, string name, string? website, string? industry, DateTimeOffset now)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -46,7 +50,7 @@ public sealed class Company : AggregateRoot<CompanyId>
             return CompanyErrors.InvalidWebsite;
         }
 
-        return new Company(CompanyId.New(), name.Trim(), website, industry?.Trim(), now);
+        return new Company(CompanyId.New(), ownerId, name.Trim(), website, industry?.Trim(), now);
     }
 }
 

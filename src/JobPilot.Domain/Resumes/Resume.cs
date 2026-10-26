@@ -1,4 +1,5 @@
 using JobPilot.Domain.Abstractions;
+using JobPilot.Domain.Users;
 
 namespace JobPilot.Domain.Resumes;
 
@@ -14,18 +15,21 @@ public readonly record struct ResumeId(Guid Value) : IStronglyTypedId<ResumeId, 
 public sealed record ResumeCreatedDomainEvent(ResumeId ResumeId, DateTimeOffset OccurredOn) : IDomainEvent;
 
 /// <summary>Una versión de tu CV (por ejemplo "Backend .NET – ES" o "AI Engineer – EN").</summary>
-public sealed class Resume : AggregateRoot<ResumeId>
+public sealed class Resume : AggregateRoot<ResumeId>, IOwnedByUser
 {
     public const int NameMaxLength = 120;
 
-    private Resume(ResumeId id, string name, string content, DateTimeOffset createdAt) : base(id)
+    private Resume(ResumeId id, UserId ownerId, string name, string content, DateTimeOffset createdAt) : base(id)
     {
+        OwnerId = ownerId;
         Name = name;
         Content = content;
         CreatedAt = createdAt;
     }
 
     private Resume() { }
+
+    public UserId OwnerId { get; private set; }
 
     public string Name { get; private set; } = null!;
 
@@ -35,7 +39,7 @@ public sealed class Resume : AggregateRoot<ResumeId>
 
     public float[]? Embedding { get; private set; }
 
-    public static Result<Resume> Create(string name, string content, DateTimeOffset now)
+    public static Result<Resume> Create(UserId ownerId, string name, string content, DateTimeOffset now)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -47,7 +51,7 @@ public sealed class Resume : AggregateRoot<ResumeId>
             return ResumeErrors.ContentRequired;
         }
 
-        var resume = new Resume(ResumeId.New(), name.Trim(), content, now);
+        var resume = new Resume(ResumeId.New(), ownerId, name.Trim(), content, now);
         resume.Raise(new ResumeCreatedDomainEvent(resume.Id, now));
         return resume;
     }

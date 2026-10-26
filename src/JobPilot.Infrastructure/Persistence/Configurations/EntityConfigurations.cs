@@ -13,7 +13,8 @@ internal sealed class CompanyConfiguration : EntityConfiguration<Company, Compan
         builder.Property(c => c.Name).HasMaxLength(Company.NameMaxLength).IsRequired();
         builder.Property(c => c.Website).HasMaxLength(2048);
         builder.Property(c => c.Industry).HasMaxLength(100);
-        builder.HasIndex(c => c.Name).IsUnique();
+        // El nombre es único por usuario, no global: dos personas pueden postular a la misma empresa.
+        builder.HasIndex(c => new { c.OwnerId, c.Name }).IsUnique();
     }
 }
 
@@ -30,7 +31,7 @@ internal sealed class JobApplicationConfiguration : EntityConfiguration<JobAppli
             .HasForeignKey(a => a.CompanyId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasIndex(a => a.Status);
+        builder.HasIndex(a => new { a.OwnerId, a.Status });
         builder.HasIndex(a => a.UpdatedAt);
 
         // Value object -> columnas en la misma tabla.
@@ -85,6 +86,7 @@ internal sealed class ResumeConfiguration : EntityConfiguration<Resume, ResumeId
     {
         builder.Property(r => r.Name).HasMaxLength(Resume.NameMaxLength).IsRequired();
         builder.Property(r => r.Content).IsRequired();
+        builder.HasIndex(r => r.OwnerId);
 
         builder.Property(r => r.Embedding)
             .HasConversion<FloatArrayToVectorConverter, FloatArrayComparer>()

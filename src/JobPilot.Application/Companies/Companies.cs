@@ -1,4 +1,5 @@
 using FluentValidation;
+using JobPilot.Application.Abstractions.Authentication;
 using JobPilot.Application.Abstractions.Messaging;
 using JobPilot.Application.Abstractions.Paging;
 using JobPilot.Domain.Abstractions;
@@ -27,6 +28,7 @@ internal sealed class CreateCompanyCommandValidator : AbstractValidator<CreateCo
 
 internal sealed class CreateCompanyCommandHandler(
     IRepository<Company, CompanyId> companies,
+    IUserContext userContext,
     TimeProvider timeProvider)
     : ICommandHandler<CreateCompanyCommand, CompanyResponse>
 {
@@ -37,7 +39,7 @@ internal sealed class CreateCompanyCommandHandler(
             return CompanyErrors.NameAlreadyExists(command.Name);
         }
 
-        var result = Company.Create(command.Name, command.Website, command.Industry, timeProvider.GetUtcNow());
+        var result = Company.Create(userContext.UserId, command.Name, command.Website, command.Industry, timeProvider.GetUtcNow());
         if (result.IsFailure)
         {
             return result.Error;

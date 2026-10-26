@@ -80,6 +80,19 @@ public sealed class LayerTests
         aggregates.SelectMany(t => t.GetConstructors()).ShouldBeEmpty("aggregates must be created through factory methods");
     }
 
+    [Fact]
+    public void Aggregates_BelongToAUser()
+    {
+        // Sin IOwnedByUser, un aggregate nuevo no recibiría el query filter y sus datos serían visibles para todos.
+        var aggregates = Domain.GetTypes()
+            .Where(t => t is { IsAbstract: false, BaseType.IsGenericType: true } &&
+                        t.BaseType.GetGenericTypeDefinition() == typeof(AggregateRoot<>));
+
+        aggregates.Where(t => !typeof(JobPilot.Domain.Users.IOwnedByUser).IsAssignableFrom(t))
+            .Select(t => t.Name)
+            .ShouldBeEmpty("every aggregate root must implement IOwnedByUser");
+    }
+
     private static string Describe(NetArchTest.Rules.TestResult result) =>
         "Violations: " + string.Join(", ", result.FailingTypeNames ?? []);
 }

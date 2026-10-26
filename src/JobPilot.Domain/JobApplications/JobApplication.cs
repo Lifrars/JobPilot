@@ -1,5 +1,6 @@
 using JobPilot.Domain.Abstractions;
 using JobPilot.Domain.Companies;
+using JobPilot.Domain.Users;
 
 namespace JobPilot.Domain.JobApplications;
 
@@ -7,7 +8,7 @@ namespace JobPilot.Domain.JobApplications;
 /// Raíz de agregado: una postulación a un puesto. Todas sus reglas (transiciones de estado,
 /// entrevistas, análisis de IA) se aplican aquí; nadie modifica sus colecciones desde fuera.
 /// </summary>
-public sealed class JobApplication : AggregateRoot<JobApplicationId>
+public sealed class JobApplication : AggregateRoot<JobApplicationId>, IOwnedByUser
 {
     public const int TitleMaxLength = 200;
 
@@ -16,6 +17,7 @@ public sealed class JobApplication : AggregateRoot<JobApplicationId>
 
     private JobApplication(
         JobApplicationId id,
+        UserId ownerId,
         CompanyId companyId,
         string title,
         string? postingUrl,
@@ -24,6 +26,7 @@ public sealed class JobApplication : AggregateRoot<JobApplicationId>
         WorkMode workMode,
         DateTimeOffset now) : base(id)
     {
+        OwnerId = ownerId;
         CompanyId = companyId;
         Title = title;
         PostingUrl = postingUrl;
@@ -36,6 +39,8 @@ public sealed class JobApplication : AggregateRoot<JobApplicationId>
     }
 
     private JobApplication() { }
+
+    public UserId OwnerId { get; private set; }
 
     public CompanyId CompanyId { get; private set; }
 
@@ -67,6 +72,7 @@ public sealed class JobApplication : AggregateRoot<JobApplicationId>
     public IReadOnlyCollection<Interview> Interviews => _interviews.AsReadOnly();
 
     public static Result<JobApplication> Create(
+        UserId ownerId,
         CompanyId companyId,
         string title,
         string? postingUrl,
@@ -86,9 +92,9 @@ public sealed class JobApplication : AggregateRoot<JobApplicationId>
         }
 
         var application = new JobApplication(
-            JobApplicationId.New(), companyId, title.Trim(), postingUrl, jobDescription, salary, workMode, now);
+            JobApplicationId.New(), ownerId, companyId, title.Trim(), postingUrl, jobDescription, salary, workMode, now);
 
-        application.Raise(new JobApplicationCreatedDomainEvent(application.Id, now));
+        application.Raise(new JobApplicationCreatedDomainEvent(application.Id, ownerId, now));
 
         return application;
     }
@@ -116,7 +122,7 @@ public sealed class JobApplication : AggregateRoot<JobApplicationId>
             AppliedAt ??= now;
         }
 
-        Raise(new ApplicationStatusChangedDomainEvent(Id, previous.Name, next.Name, now));
+        Raise(new ApplicationStatusChangedDomainEvent(Id, OwnerId, previous.Name, next.Name, now));
 
         return Result.Success();
     }

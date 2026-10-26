@@ -2,6 +2,7 @@ using JobPilot.Api;
 using JobPilot.Api.Endpoints;
 using JobPilot.Application;
 using JobPilot.Infrastructure;
+using JobPilot.Infrastructure.Identity;
 using JobPilot.Infrastructure.Persistence;
 using Scalar.AspNetCore;
 
@@ -31,11 +32,19 @@ if (app.Environment.IsDevelopment())
     }
 }
 
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseRateLimiter();
 
 app.MapDefaultEndpoints();
-app.MapEndpoints(app.MapGroup("/api/v1"));
-app.MapMcp("/mcp");
+
+// Público: registro, login y refresh de tokens (Identity API endpoints).
+app.MapGroup("/api/v1/auth").WithTags("Auth").MapIdentityApi<AppUser>();
+
+// Todo lo demás exige un usuario autenticado; los query filters aíslan sus datos.
+app.MapEndpoints(app.MapGroup("/api/v1").RequireAuthorization());
+app.MapMcp("/mcp").RequireAuthorization();
+
 app.MapGet("/", () => Results.Redirect("/scalar")).ExcludeFromDescription();
 
 await app.RunAsync();

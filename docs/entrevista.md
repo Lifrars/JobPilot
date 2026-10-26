@@ -39,6 +39,13 @@
 18. **¿Cómo controlas los costos?** Con rate limiting en los endpoints de IA, embeddings asíncronos solo cuando cambia la descripción y un modelo pequeño para la extracción.
 19. **¿Qué es MCP?** Model Context Protocol, un estándar para exponer herramientas a agentes de IA. Mis tools reutilizan los mismos casos de uso (`ISender`) que la API REST.
 
+### Seguridad y multiusuario
+- **¿Cómo aíslas los datos entre usuarios?** Con un global query filter de EF Core 10 registrado genéricamente para todo aggregate `IOwnedByUser`. Si alguien agrega una entidad nueva queda protegida sola, y un test de arquitectura exige la interfaz.
+- **¿Dónde NO aplican los query filters?** En SQL crudo, en `IgnoreQueryFilters()` y en procesos sin usuario. Por eso la búsqueda vectorial filtra por `OwnerId` explícitamente y el Outbox corre en modo sistema.
+- **¿Por qué 404 y no 403 para recursos ajenos?** Un 403 confirma que el recurso existe (enumeración de IDs). Con el filtro, para el otro usuario simplemente no existe.
+- **¿Qué tiene que ver la caché con la seguridad?** Una clave global (`pipeline-stats`) le mostraría a un usuario las métricas de otro. Las claves llevan el `userId`.
+- **¿Identity bearer o JWT?** Identity API endpoints es lo más rápido y seguro para una sola API. Con varios servicios usaría JWT o un proveedor como Entra ID o Keycloak.
+
 ### Testing y operación
 20. **¿Por qué Testcontainers y no InMemory?** El proveedor InMemory no es relacional: no prueba SQL, constraints ni pgvector. Testcontainers usa el mismo Postgres que producción.
 21. **¿Qué son los tests de arquitectura?** Reglas como "Domain no depende de EF Core" convertidas en tests que fallan en CI.
@@ -47,6 +54,6 @@
 
 ### Conductuales (método STAR)
 24. **"Cuéntame de un bug difícil."** Usa la traducción de EF del smart enum: situación, cómo lo diagnosticaste con un test de `ToQueryString`, la solución y el aprendizaje.
-25. **"¿Qué mejorarías?"** Autenticación con aislamiento por usuario (query filters), índice HNSW, Outbox con `SKIP LOCKED`, un frontend y el despliegue en Azure Container Apps.
+25. **"¿Qué mejorarías?"** Row-Level Security en PostgreSQL como segunda capa de aislamiento, índice HNSW, Outbox con `SKIP LOCKED`, un frontend y el despliegue en Azure Container Apps.
 
 > Practica con la skill `interview-prep` de Claude Code: te hará estas preguntas con repreguntas y te dará feedback.

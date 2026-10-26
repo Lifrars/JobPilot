@@ -1,3 +1,5 @@
+using JobPilot.Infrastructure.Identity;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,5 +23,6 @@ public sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<Job
     public JobPilotDbContext CreateDbContext(string[] args) =>
         new(new DbContextOptionsBuilder<JobPilotDbContext>()
             .UseNpgsql("Host=localhost;Database=jobpilot", npgsql => npgsql.UseVector())
-            .Options);
+            .Options,
+            new CurrentUser(new HttpContextAccessor()));
 }

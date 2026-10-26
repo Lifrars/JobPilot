@@ -1,9 +1,11 @@
 using FluentValidation;
+using JobPilot.Application.Abstractions.Authentication;
 using JobPilot.Application.Abstractions.Messaging;
 using JobPilot.Application.Abstractions.Paging;
 using JobPilot.Domain.Abstractions;
 using JobPilot.Domain.Companies;
 using JobPilot.Domain.JobApplications;
+using JobPilot.Domain.Users;
 using Microsoft.Extensions.Caching.Hybrid;
 
 namespace JobPilot.Application.JobApplications;
@@ -74,19 +76,21 @@ public sealed record PipelineStatsResponse(
 
 public sealed record GetPipelineStatsQuery : IQuery<PipelineStatsResponse>;
 
-internal sealed class GetPipelineStatsQueryHandler(IJobApplicationRepository applications, HybridCache cache)
+internal sealed class GetPipelineStatsQueryHandler(IJobApplicationRepository applications, HybridCache cache, IUserContext userContext)
     : IQueryHandler<GetPipelineStatsQuery, PipelineStatsResponse>
 {
-    public const string CacheKey = "pipeline-stats";
-    public const string CacheTag = "pipeline-stats";
+    // La clave y el tag incluyen el usuario: una clave global le mostraría a todos las métricas del primero que consulte.
+    public static string CacheKey(UserId ownerId) => $"pipeline-stats:{ownerId}";
+
+    public static string CacheTag(UserId ownerId) => $"pipeline-stats:{ownerId}";
 
     public async Task<Result<PipelineStatsResponse>> Handle(GetPipelineStatsQuery query, CancellationToken cancellationToken)
     {
         // HybridCache: caché L1 (memoria) + L2 opcional (Redis), con protección contra "stampede".
         return await cache.GetOrCreateAsync(
-            CacheKey,
+            CacheKey(userContext.UserId),
             async ct => Calculate(await applications.CountByStatusAsync(ct)),
-            tags: [CacheTag],
+            tags: [CacheTag(userContext.UserId)],
             cancellationToken: cancellationToken);
     }
 

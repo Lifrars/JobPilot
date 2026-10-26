@@ -49,8 +49,8 @@ internal sealed class InvalidatePipelineStatsHandler(HybridCache cache)
       IDomainEventHandler<ApplicationStatusChangedDomainEvent>
 {
     public Task Handle(JobApplicationCreatedDomainEvent domainEvent, CancellationToken cancellationToken) =>
-        cache.RemoveByTagAsync(GetPipelineStatsQueryHandler.CacheTag, cancellationToken).AsTask();
+        cache.RemoveByTagAsync(GetPipelineStatsQueryHandler.CacheTag(domainEvent.OwnerId), cancellationToken).AsTask();
 
     public Task Handle(ApplicationStatusChangedDomainEvent domainEvent, CancellationToken cancellationToken) =>
-        cache.RemoveByTagAsync(GetPipelineStatsQueryHandler.CacheTag, cancellationToken).AsTask();
+        cache.RemoveByTagAsync(GetPipelineStatsQueryHandler.CacheTag(domainEvent.OwnerId), cancellationToken).AsTask();
 }

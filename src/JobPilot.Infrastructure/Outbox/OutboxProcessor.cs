@@ -1,4 +1,5 @@
 using JobPilot.Application.Abstractions.Messaging;
+using JobPilot.Infrastructure.Identity;
 using JobPilot.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,6 +39,9 @@ internal sealed partial class OutboxProcessor(
     public async Task<int> ProcessBatchAsync(CancellationToken cancellationToken)
     {
         await using var scope = scopeFactory.CreateAsyncScope();
+
+        // No hay usuario autenticado en segundo plano: el Outbox procesa eventos de todos los usuarios.
+        scope.ServiceProvider.GetRequiredService<CurrentUser>().RunAsSystem();
         var context = scope.ServiceProvider.GetRequiredService<JobPilotDbContext>();
         var dispatcher = scope.ServiceProvider.GetRequiredService<IDomainEventDispatcher>();
 

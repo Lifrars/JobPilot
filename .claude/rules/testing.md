@@ -14,6 +14,8 @@ paths:
   - Regla de negocio → `JobPilot.Domain.UnitTests` (sin mocks).
   - Handler / pipeline / estrategia → `JobPilot.Application.UnitTests`.
   - Nueva specification o consulta EF → agregar caso en `QueryTranslationTests` (verifica el SQL sin Docker).
-  - Flujo HTTP completo → `JobApplicationApiTests` (Testcontainers + pgvector, colección `ApiCollection`).
+  - Flujo HTTP completo → `JobApplicationApiTests` (Testcontainers + pgvector, colección `ApiCollection`). Usar `factory.CreateAuthenticatedClientAsync()`: registra un usuario nuevo por test.
+  - Todo endpoint nuevo que lea datos → caso en `UserIsolationTests` (otro usuario recibe 404 / lista vacía).
+  - Smoke tests sin BD → `StartupSmokeTests` con `TestAuthHandler` (header `X-Test-User`).
   - Nueva regla de capas → `JobPilot.ArchitectureTests`.
 - Los efectos del Outbox son asíncronos: esperar con polling (`WaitUntilAsync`), nunca `Task.Delay` fijo.

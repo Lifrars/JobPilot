@@ -1,3 +1,5 @@
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using JobPilot.Application.Abstractions.AI;
@@ -36,6 +38,21 @@ public sealed class JobPilotApiFactory : WebApplicationFactory<Program>, IAsyncL
             services.RemoveAll<IEmbeddingService>();
             services.AddSingleton<IEmbeddingService, FakeEmbeddingService>();
         });
+    }
+
+    /// <summary>Registra un usuario nuevo (único por test) e inicia sesión: devuelve un cliente con su bearer token.</summary>
+    public async Task<HttpClient> CreateAuthenticatedClientAsync()
+    {
+        var client = CreateClient();
+        var credentials = new { Email = $"user-{Guid.NewGuid():N}@jobpilot.test", Password = "Test-Passw0rd!" };
+
+        (await client.PostAsJsonAsync("/api/v1/auth/register", credentials)).EnsureSuccessStatusCode();
+        var login = await client.PostAsJsonAsync("/api/v1/auth/login", credentials);
+        login.EnsureSuccessStatusCode();
+
+        var token = (await login.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("accessToken").GetString();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return client;
     }
 
     public override async ValueTask DisposeAsync()

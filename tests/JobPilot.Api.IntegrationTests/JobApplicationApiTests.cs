@@ -9,10 +9,19 @@ using JobPilot.Domain.JobApplications;
 namespace JobPilot.Api.IntegrationTests;
 
 [Collection(nameof(ApiCollection))]
-public sealed class JobApplicationApiTests(JobPilotApiFactory factory)
+public sealed class JobApplicationApiTests(JobPilotApiFactory factory) : IAsyncLifetime
 {
-    private readonly HttpClient _client = factory.CreateClient();
+    private HttpClient _client = null!;
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
+    // xUnit crea una instancia por test: cada test trabaja con su propio usuario recién registrado.
+    public async ValueTask InitializeAsync() => _client = await factory.CreateAuthenticatedClientAsync();
+
+    public ValueTask DisposeAsync()
+    {
+        _client.Dispose();
+        return ValueTask.CompletedTask;
+    }
 
     [Fact]
     public async Task Lifecycle_FollowsTheStateMachine()

@@ -1,8 +1,11 @@
+using System.Security.Claims;
 using JobPilot.Application.JobApplications;
 using JobPilot.Domain.Companies;
 using JobPilot.Domain.JobApplications;
+using JobPilot.Infrastructure.Identity;
 using JobPilot.Infrastructure.Persistence;
 using JobPilot.Infrastructure.Persistence.Repositories;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Pgvector.EntityFrameworkCore;
 
@@ -10,14 +13,41 @@ namespace JobPilot.Api.IntegrationTests;
 
 /// <summary>
 /// Verifica que EF Core traduce a SQL nuestras specifications con tipos personalizados
-/// (IDs fuertemente tipados, smart enums, ordenamiento con boxing). No necesita base de datos ni Docker.
+/// (IDs fuertemente tipados, smart enums, ordenamiento con boxing, filtro por dueño). No necesita base de datos ni Docker.
 /// </summary>
 public sealed class QueryTranslationTests : IDisposable
 {
+    private static readonly Guid UserGuid = Guid.NewGuid();
+
     private readonly JobPilotDbContext _context = new(
         new DbContextOptionsBuilder<JobPilotDbContext>()
             .UseNpgsql("Host=localhost;Database=translation-only", npgsql => npgsql.UseVector())
-            .Options);
+            .Options,
+        new CurrentUser(new HttpContextAccessor
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, UserGuid.ToString())], "Test"))
+            }
+        }));
+
+    [Fact]
+    public void EveryOwnedAggregate_IsFilteredByCurrentUser()
+    {
+        var applications = _context.JobApplications.ToQueryString();
+        var companies = _context.Companies.ToQueryString();
+        var resumes = _context.Resumes.ToQueryString();
+
+        foreach (var sql in new[] { applications, companies, resumes })
+        {
+            sql.ShouldContain("\"OwnerId\" = @");
+            sql.ShouldContain(UserGuid.ToString());
+        }
+    }
+
+    [Fact]
+    public void IgnoreQueryFilters_RemovesTheOwnerFilter() =>
+        _context.JobApplications.IgnoreQueryFilters([JobPilotDbContext.OwnerFilter]).ToQueryString().ShouldNotContain("\"OwnerId\" = @");
 
     [Fact]
     public void FilterSpec_TranslatesStatusCompanyAndSearchToSql()

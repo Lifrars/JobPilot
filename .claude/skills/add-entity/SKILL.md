@@ -17,18 +17,22 @@ public readonly record struct ContactId(Guid Value) : IStronglyTypedId<ContactId
     public override string ToString() => Value.ToString();
 }
 
-public sealed class Contact : AggregateRoot<ContactId>
+public sealed class Contact : AggregateRoot<ContactId>, IOwnedByUser
 {
-    private Contact(ContactId id, string name, DateTimeOffset createdAt) : base(id) { Name = name; CreatedAt = createdAt; }
+    private Contact(ContactId id, UserId ownerId, string name, DateTimeOffset createdAt) : base(id)
+    {
+        OwnerId = ownerId; Name = name; CreatedAt = createdAt;
+    }
     private Contact() { }
 
+    public UserId OwnerId { get; private set; }
     public string Name { get; private set; } = null!;
     public DateTimeOffset CreatedAt { get; private set; }
 
-    public static Result<Contact> Create(string name, DateTimeOffset now)
+    public static Result<Contact> Create(UserId ownerId, string name, DateTimeOffset now)
     {
         if (string.IsNullOrWhiteSpace(name)) return ContactErrors.NameRequired;
-        return new Contact(ContactId.New(), name.Trim(), now);
+        return new Contact(ContactId.New(), ownerId, name.Trim(), now);
     }
 }
 
@@ -38,7 +42,8 @@ public static class ContactErrors
     public static Error NotFound(ContactId id) => Error.NotFound("Contact.NotFound", $"The contact '{id}' was not found.");
 }
 ```
-El converter del ID se registra solo (`AddStronglyTypedIdConversions`).
+El converter del ID se registra solo (`AddStronglyTypedIdConversions`) y, al implementar `IOwnedByUser`,
+el query filter por usuario también. En el handler, el dueño sale de `IUserContext.UserId`.
 
 ## 2. Infrastructure
 - `DbSet<Contact> Contacts => Set<Contact>();` en `JobPilotDbContext`.
@@ -49,6 +54,7 @@ internal sealed class ContactConfiguration : EntityConfiguration<Contact, Contac
     protected override void ConfigureEntity(EntityTypeBuilder<Contact> builder)
     {
         builder.Property(c => c.Name).HasMaxLength(200).IsRequired();
+        builder.HasIndex(c => c.OwnerId);
     }
 }
 ```
@@ -61,6 +67,7 @@ dotnet ef migrations add AddContacts --project src/JobPilot.Infrastructure --sta
 
 ## 4. Tests
 - `tests/JobPilot.Domain.UnitTests/<Name>Tests.cs`: factory válida e inválida, cada regla de negocio.
-- `LayerTests.Aggregates_DoNotExposePublicConstructors` verificará el diseño automáticamente.
+- `LayerTests` verificará el diseño automáticamente (sin constructores públicos, implementa `IOwnedByUser`).
+- Agrega un caso en `UserIsolationTests`: otro usuario no debe ver el recurso.
 
 Después usa la skill `add-feature` para exponer los casos de uso.
