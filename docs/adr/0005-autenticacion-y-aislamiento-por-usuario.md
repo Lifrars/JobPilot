@@ -24,6 +24,8 @@ postulaciones, empresas y CVs. Además, ningún desarrollador debería poder "ol
 | Caché con clave global: un usuario vería las métricas de otro | Clave y tag por usuario: `pipeline-stats:{userId}`; los eventos llevan `OwnerId` |
 | El Outbox corre sin usuario, así que el filtro le ocultaría todo | `CurrentUser.RunAsSystem()` en el scope del procesador |
 | Rate limiting global: un usuario agotaría la cuota de todos | Particionado por `NameIdentifier` |
+| La factory de HybridCache corre sin el contexto de la request (`UnsafeQueueUserWorkItem`), así que `HttpContext` es null y el filtro usaba `Guid.Empty` | `CurrentUser` guarda la referencia al `HttpContext` del scope; test `Stats_CountTheCurrentUsersApplications` |
+| Con cookie, Identity construye `CurrentUser` durante la autenticación (SecurityStampValidator → SignInManager → DbContext), con el usuario aún anónimo | El usuario se lee de forma diferida desde ese `HttpContext`, no en el constructor; test `CookieSession_SeesItsOwnData` |
 | Un aggregate nuevo sin filtro | `LayerTests.Aggregates_BelongToAUser` falla si no implementa `IOwnedByUser` |
 | Revelar que existe un recurso ajeno | El filtro hace que la respuesta sea 404, no 403 |
 

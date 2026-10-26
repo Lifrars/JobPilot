@@ -55,6 +55,17 @@ public sealed class JobPilotApiFactory : WebApplicationFactory<Program>, IAsyncL
         return client;
     }
 
+    /// <summary>Igual que el frontend: login con <c>?useCookies=true</c> y la sesión viaja en la cookie HttpOnly.</summary>
+    public async Task<HttpClient> CreateCookieClientAsync()
+    {
+        var client = CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
+        var credentials = new { Email = $"cookie-{Guid.NewGuid():N}@jobpilot.test", Password = "Test-Passw0rd!" };
+
+        (await client.PostAsJsonAsync("/api/v1/auth/register", credentials)).EnsureSuccessStatusCode();
+        (await client.PostAsJsonAsync("/api/v1/auth/login?useCookies=true", credentials)).EnsureSuccessStatusCode();
+        return client;
+    }
+
     public override async ValueTask DisposeAsync()
     {
         await base.DisposeAsync();

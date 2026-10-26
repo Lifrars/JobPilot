@@ -68,6 +68,40 @@ public sealed class UserIsolationTests(JobPilotApiFactory factory)
         aliceHits!.ShouldHaveSingleItem().Id.ShouldBe(aliceApp.Id);
     }
 
+    [Fact]
+    public async Task Stats_CountTheCurrentUsersApplications()
+    {
+        // Regresión: HybridCache ejecuta la factory con ThreadPool.UnsafeQueueUserWorkItem (sin ExecutionContext),
+        // así que ahí dentro HttpContext es null. Si el usuario se leyera "en ese momento", el filtro usaría Guid.Empty.
+        using var carol = await factory.CreateAuthenticatedClientAsync();
+        var company = await (await carol.PostAsJsonAsync("/api/v1/companies", new { Name = "Stats Corp" }, Ct))
+            .Content.ReadFromJsonAsync<CompanyResponse>(Ct);
+        await carol.PostAsJsonAsync("/api/v1/applications", new { CompanyId = company!.Id, Title = "Dev 1" }, Ct);
+        await carol.PostAsJsonAsync("/api/v1/applications", new { CompanyId = company.Id, Title = "Dev 2" }, Ct);
+
+        var stats = await carol.GetFromJsonAsync<PipelineStatsResponse>("/api/v1/applications/stats", Ct);
+
+        stats!.Total.ShouldBe(2);
+        stats.ByStatus["Wishlist"].ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task CookieSession_SeesItsOwnData()
+    {
+        // Regresión: con cookie, Identity construye SecurityStampValidator -> SignInManager -> DbContext -> CurrentUser
+        // DURANTE la autenticación, cuando el usuario aún es anónimo. CurrentUser no puede fijar el usuario en su constructor.
+        using var dave = await factory.CreateCookieClientAsync();
+        var company = await (await dave.PostAsJsonAsync("/api/v1/companies", new { Name = "Cookie Corp" }, Ct))
+            .Content.ReadFromJsonAsync<CompanyResponse>(Ct);
+        await dave.PostAsJsonAsync("/api/v1/applications", new { CompanyId = company!.Id, Title = "Cookie Dev" }, Ct);
+
+        var list = await dave.GetFromJsonAsync<PagedList<JobApplicationSummary>>("/api/v1/applications", JobPilotApiFactory.Json, Ct);
+        var stats = await dave.GetFromJsonAsync<PipelineStatsResponse>("/api/v1/applications/stats", Ct);
+
+        list!.Items.ShouldHaveSingleItem().Title.ShouldBe("Cookie Dev");
+        stats!.Total.ShouldBe(1);
+    }
+
     private static async Task WaitUntilAsync(Func<Task<bool>> condition)
     {
         var deadline = DateTime.UtcNow.AddSeconds(15);
