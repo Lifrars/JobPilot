@@ -2,7 +2,6 @@ using JobPilot.Api;
 using JobPilot.Api.Endpoints;
 using JobPilot.Application;
 using JobPilot.Infrastructure;
-using JobPilot.Infrastructure.Identity;
 using JobPilot.Infrastructure.Persistence;
 using Scalar.AspNetCore;
 
@@ -38,8 +37,8 @@ app.UseRateLimiter();
 
 app.MapDefaultEndpoints();
 
-// Público: registro, login y refresh de tokens (Identity API endpoints).
-app.MapGroup("/api/v1/auth").WithTags("Auth").MapIdentityApi<AppUser>();
+// Público: registro, login y refresh (Identity API endpoints) + logout.
+app.MapAuthEndpoints();
 
 // Todo lo demás exige un usuario autenticado; los query filters aíslan sus datos.
 app.MapEndpoints(app.MapGroup("/api/v1").RequireAuthorization());

@@ -33,6 +33,7 @@ public sealed record JobApplicationSummary(
     Guid CompanyId,
     string Title,
     string Status,
+    IReadOnlyList<string> AllowedTransitions,
     WorkMode WorkMode,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
@@ -66,6 +67,7 @@ internal static class JobApplicationMappings
         application.CompanyId.Value,
         application.Title,
         application.Status.Name,
+        [.. application.Status.AllowedTransitions.Select(s => s.Name)],
         application.WorkMode,
         application.CreatedAt,
         application.UpdatedAt);

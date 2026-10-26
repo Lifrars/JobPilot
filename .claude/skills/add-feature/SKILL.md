@@ -70,7 +70,17 @@ dotnet ef migrations add <NombreDescriptivo> --project src/JobPilot.Infrastructu
 ```
 Revisa el `.cs` generado. Si agregaste una specification, añade un caso en `QueryTranslationTests`.
 
-## 6. Tests y verificación
+## 6. Tests y verificación (backend)
 - Unit test del handler en `tests/JobPilot.Application.UnitTests` (NSubstitute + `FakeTimeProvider`).
 - Flujo HTTP en `tests/JobPilot.Api.IntegrationTests/JobApplicationApiTests.cs` si el endpoint es importante.
+- Si lee datos: un caso en `UserIsolationTests` (otro usuario recibe 404).
 - `dotnet build JobPilot.slnx` (0 warnings) y `dotnet test`.
+
+## 7. Frontend (si el feature tiene UI)
+Sigue `.claude/rules/frontend.md` y lee la guía de Next correspondiente en `web/node_modules/next/dist/docs/`.
+1. Levanta la API (`dotnet run --project src/JobPilot.Api --launch-profile http -- --Database:MigrateOnStartup=false`)
+   y ejecuta `cd web && npm run api:types`. Commitea el `schema.d.ts` actualizado.
+2. Agrega la query o mutación con `queryOptions` en `web/src/lib/api/queries.ts` (o un hook en `src/features/<feature>/`).
+3. Crea el componente en `web/src/features/<feature>/`. La ruta en `src/app` solo compone metadata, `<Suspense>` y el componente.
+4. Test con Vitest + MSW junto al componente (`*.test.tsx`).
+5. `npm run lint && npm run typecheck && npm test && npm run build`.

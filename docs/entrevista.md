@@ -46,6 +46,13 @@
 - **¿Qué tiene que ver la caché con la seguridad?** Una clave global (`pipeline-stats`) le mostraría a un usuario las métricas de otro. Las claves llevan el `userId`.
 - **¿Identity bearer o JWT?** Identity API endpoints es lo más rápido y seguro para una sola API. Con varios servicios usaría JWT o un proveedor como Entra ID o Keycloak.
 
+### Frontend (Next.js)
+- **¿Por qué Next.js como BFF y no una SPA que llame directo a la API?** El navegador habla con un solo origen, así que la sesión es una cookie HttpOnly (sin tokens en JavaScript ni CORS) y la URL interna de la API nunca se expone.
+- **¿Cómo mantienes los tipos sincronizados con .NET?** `openapi-typescript` genera `schema.d.ts` desde el OpenAPI. Si cambia un DTO y regenero, el typecheck marca cada uso roto. Tuve que activar `JsonNumberHandling.Strict` porque .NET 10 documentaba los números como `number | string`.
+- **¿Qué es Cache Components / Partial Prerender?** Next prerenderiza el shell estático y transmite tras `<Suspense>` lo que depende de la request (sesión, datos). Leer `cookies()` fuera de un Suspense rompe el build, y eso obliga a pensar qué es estático y qué no.
+- **¿Cómo funciona el drag & drop del kanban?** Con dnd-kit y una actualización optimista con TanStack Query: muevo la tarjeta en la caché y, si la API rechaza la transición (State pattern), la devuelvo a su lugar. El frontend solo ilumina las columnas que el backend informa en `allowedTransitions`.
+- **¿Cómo pruebas el frontend?** Con Vitest, Testing Library (consultas por rol y label, como un usuario) y MSW, que intercepta `fetch`. Encontré que openapi-fetch guardaba la referencia a `fetch` antes de que MSW la reemplazara, y lo resolví resolviendo `fetch` en cada llamada.
+
 ### Testing y operación
 20. **¿Por qué Testcontainers y no InMemory?** El proveedor InMemory no es relacional: no prueba SQL, constraints ni pgvector. Testcontainers usa el mismo Postgres que producción.
 21. **¿Qué son los tests de arquitectura?** Reglas como "Domain no depende de EF Core" convertidas en tests que fallan en CI.
@@ -53,7 +60,7 @@
 23. **¿Qué aporta Aspire?** Orquestación local (Postgres + API con un comando), service defaults (OpenTelemetry, health checks, resiliencia) y un dashboard con trazas de SQL y del LLM.
 
 ### Conductuales (método STAR)
-24. **"Cuéntame de un bug difícil."** Usa la traducción de EF del smart enum: situación, cómo lo diagnosticaste con un test de `ToQueryString`, la solución y el aprendizaje.
-25. **"¿Qué mejorarías?"** Row-Level Security en PostgreSQL como segunda capa de aislamiento, índice HNSW, Outbox con `SKIP LOCKED`, un frontend y el despliegue en Azure Container Apps.
+24. **"Cuéntame de un bug difícil."** El mejor ejemplo: al probar el frontend, un usuario nuevo veía "1 postulación activa" en sus métricas. Era una fila de otro "usuario". Encontré que HybridCache ejecuta su factory con `ThreadPool.UnsafeQueueUserWorkItem`, que no propaga el `ExecutionContext`, así que `HttpContext` era null y el query filter usaba `Guid.Empty`. Escribí primero un test de integración que fallaba (rojo). Mi primera corrección (fijar el usuario en el constructor) rompió el login por cookie, porque Identity construye ese servicio durante la autenticación, cuando el usuario aún es anónimo. La prueba en el navegador lo detectó, así que escribí un segundo test (rojo) y llegué a la solución correcta: guardar el `HttpContext` del scope y leer el usuario de forma diferida (verde). La lección: cada hipótesis se valida con un test, y los tests deben cubrir los mismos caminos que usa el producto real (cookie, no solo bearer). Otro ejemplo: la traducción de EF del smart enum, diagnosticada con `ToQueryString`.
+25. **"¿Qué mejorarías?"** Row-Level Security en PostgreSQL como segunda capa de aislamiento, índice HNSW, Outbox con `SKIP LOCKED`, tests E2E con Playwright y el despliegue en Azure Container Apps.
 
 > Practica con la skill `interview-prep` de Claude Code: te hará estas preguntas con repreguntas y te dará feedback.

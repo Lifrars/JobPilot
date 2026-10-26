@@ -1,11 +1,12 @@
 # JobPilot 🧭
 
-API para gestionar tu búsqueda de empleo **con IA**: registra postulaciones y entrevistas, analiza ofertas con un LLM,
-calcula qué tan bien encaja tu CV y busca semánticamente entre las ofertas guardadas. También expone un **servidor MCP**
-para que agentes como Claude consulten tu pipeline.
+Gestiona tu búsqueda de empleo **con IA**: un tablero kanban con tus postulaciones y entrevistas, análisis de ofertas con
+un LLM, el porcentaje de encaje de tu CV con cada oferta y búsqueda semántica. También expone un **servidor MCP** para que
+agentes como Claude consulten tu pipeline.
 
 ![.NET 10](https://img.shields.io/badge/.NET-10-512BD4) ![C# 14](https://img.shields.io/badge/C%23-14-239120)
 ![Aspire 13](https://img.shields.io/badge/Aspire-13-6C3BD1) ![PostgreSQL + pgvector](https://img.shields.io/badge/PostgreSQL-pgvector-336791)
+![Next.js 16](https://img.shields.io/badge/Next.js-16-000000) ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6)
 
 ## Qué demuestra este proyecto
 | Tema | Implementación |
@@ -17,14 +18,17 @@ para que agentes como Claude consulten tu pipeline.
 | Calidad | xUnit v3 + Shouldly + NSubstitute, Testcontainers, NetArchTest, `TreatWarningsAsErrors`, CI en GitHub Actions |
 | Seguridad | ASP.NET Core Identity (bearer tokens), aislamiento multiusuario con global query filters genéricos de EF Core 10, rate limiting por usuario |
 | Operación | .NET Aspire, OpenTelemetry (SQL + LLM), ProblemDetails, rate limiting, HybridCache, Central Package Management |
+| Frontend | Next.js 16 como BFF (cookie HttpOnly, `proxy.ts`), Cache Components / Partial Prerender, tipos generados del OpenAPI, TanStack Query con actualizaciones optimistas, kanban con dnd-kit, Vitest + MSW ([ver `web/`](web/README.md)) |
 
 ## Ejecutar
-Requisitos: .NET 10 SDK y Docker Desktop.
+Requisitos: .NET 10 SDK, Node.js 24 y Docker Desktop.
 
 ```bash
+cd web && npm install && cd ..
 dotnet run --project src/JobPilot.AppHost
 ```
-Se abre el dashboard de Aspire. Desde ahí entra a la API: `/scalar` muestra la documentación interactiva.
+Se abre el dashboard de Aspire con PostgreSQL, la API y la **web** (Next.js). Entra a la web, crea tu cuenta y empieza
+a cargar postulaciones. La API también tiene documentación interactiva en `/scalar`.
 
 ### Autenticación
 Todos los endpoints de `/api/v1` (salvo `/auth`) y el servidor MCP exigen un usuario. Cada usuario ve **solo sus datos**.
@@ -60,8 +64,9 @@ Después pregúntale a Claude: *"¿cuál es mi tasa de respuesta?"* o *"mueve la
 
 ## Tests
 ```bash
-dotnet test                                                   # todo (integración requiere Docker)
+dotnet test                                                   # backend (integración requiere Docker)
 dotnet test --project tests/JobPilot.Domain.UnitTests         # solo dominio
+cd web && npm test                                            # frontend (Vitest + MSW)
 ```
 
 ## Endpoints principales (`/api/v1`)

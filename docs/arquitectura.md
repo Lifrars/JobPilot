@@ -4,6 +4,8 @@
 
 ```mermaid
 flowchart LR
+    Browser(("Navegador")) -->|"páginas + /api/v1 (cookie HttpOnly)"| Web["web/ (Next.js 16 BFF)<br/>proxy.ts · Server/Client Components"]
+    Web -->|"proxy /api/v1/*"| Api
     Api["JobPilot.Api<br/>Minimal APIs · MCP · ProblemDetails"] --> Infra["JobPilot.Infrastructure<br/>EF Core · pgvector · Outbox · IA"]
     Api --> App
     Infra --> App["JobPilot.Application<br/>CQRS · Decorators · Strategies"]

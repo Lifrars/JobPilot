@@ -8,9 +8,18 @@ var postgres = builder.AddPostgres("postgres")
 
 var database = postgres.AddDatabase("jobpilot");
 
-builder.AddProject<Projects.JobPilot_Api>("api")
+var api = builder.AddProject<Projects.JobPilot_Api>("api")
     .WithReference(database)
     .WaitFor(database)
     .WithExternalHttpEndpoints();
+
+// Frontend Next.js (BFF): reenvía /api/v1/* a la API usando la URL que Aspire le inyecta.
+// AddNextJsApp todavía es "evaluación" en Aspire 13: aceptamos el riesgo de cambios de API.
+#pragma warning disable ASPIREJAVASCRIPT001
+builder.AddNextJsApp("web", "../../web")
+    .WithReference(api)
+    .WaitFor(api)
+    .WithExternalHttpEndpoints();
+#pragma warning restore ASPIREJAVASCRIPT001
 
 builder.Build().Run();

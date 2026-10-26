@@ -17,7 +17,12 @@ public static class DependencyInjection
         services.AddEndpoints(typeof(DependencyInjection).Assembly);
 
         services.ConfigureHttpJsonOptions(options =>
-            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+        {
+            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            // Por defecto ASP.NET acepta "42" como número; Strict hace que el contrato OpenAPI diga
+            // solo "number" y el cliente TypeScript generado no tenga tipos "number | string".
+            options.SerializerOptions.NumberHandling = JsonNumberHandling.Strict;
+        });
 
         services.AddOpenApi(options => options.AddDocumentTransformer<BearerSecuritySchemeTransformer>());
 

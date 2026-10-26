@@ -6,7 +6,8 @@ on:
   pull_request:
 
 jobs:
-  build-and-test:
+  backend:
+    name: Backend (.NET)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -24,3 +25,36 @@ jobs:
       # Los runners de GitHub traen Docker, así que Testcontainers levanta PostgreSQL + pgvector.
       - name: Test
         run: dotnet test --solution JobPilot.slnx --no-build --configuration Release
+
+  frontend:
+    name: Frontend (Next.js)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      # Con Cache Components, el build falla si algún dato de request queda fuera de <Suspense>.
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
