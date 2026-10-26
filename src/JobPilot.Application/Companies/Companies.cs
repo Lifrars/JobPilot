@@ -21,10 +21,8 @@ internal sealed class CreateCompanyCommandValidator : AbstractValidator<CreateCo
     public CreateCompanyCommandValidator()
     {
         RuleFor(c => c.Name).NotEmpty().MaximumLength(Company.NameMaxLength);
-        RuleFor(c => c.Website).Must(BeAbsoluteUrl).When(c => c.Website is not null).WithMessage("Website must be an absolute URL.");
+        RuleFor(c => c.Website).Must(HttpUrl.IsValid).When(c => c.Website is not null).WithMessage("Website must be an absolute http(s) URL.");
     }
-
-    private static bool BeAbsoluteUrl(string? url) => Uri.TryCreate(url, UriKind.Absolute, out _);
 }
 
 internal sealed class CreateCompanyCommandHandler(

@@ -41,7 +41,7 @@ public sealed class Company : AggregateRoot<CompanyId>
             return CompanyErrors.NameRequired;
         }
 
-        if (website is not null && !Uri.TryCreate(website, UriKind.Absolute, out _))
+        if (website is not null && !HttpUrl.IsValid(website))
         {
             return CompanyErrors.InvalidWebsite;
         }

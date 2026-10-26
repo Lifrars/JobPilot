@@ -80,7 +80,7 @@ public sealed class JobApplication : AggregateRoot<JobApplicationId>
             return JobApplicationErrors.TitleRequired;
         }
 
-        if (postingUrl is not null && !Uri.TryCreate(postingUrl, UriKind.Absolute, out _))
+        if (postingUrl is not null && !HttpUrl.IsValid(postingUrl))
         {
             return JobApplicationErrors.InvalidUrl;
         }

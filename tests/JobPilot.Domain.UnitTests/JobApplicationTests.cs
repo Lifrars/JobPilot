@@ -30,13 +30,22 @@ public sealed class JobApplicationTests
         result.Error.ShouldBe(JobApplicationErrors.TitleRequired);
     }
 
-    [Fact]
-    public void Create_WithRelativeUrl_ReturnsInvalidUrl()
+    [Theory]
+    [InlineData("/jobs/1")]                 // en Linux, Uri lo interpreta como file:///jobs/1
+    [InlineData("file:///etc/passwd")]
+    [InlineData("ftp://example.com/job")]
+    [InlineData("not a url")]
+    public void Create_WithNonHttpUrl_ReturnsInvalidUrl(string url)
     {
-        var result = JobApplication.Create(CompanyId.New(), "Dev", "/jobs/1", null, null, WorkMode.Unknown, Now);
+        var result = JobApplication.Create(CompanyId.New(), "Dev", url, null, null, WorkMode.Unknown, Now);
 
         result.Error.ShouldBe(JobApplicationErrors.InvalidUrl);
     }
+
+    [Fact]
+    public void Create_WithHttpsUrl_Succeeds() =>
+        JobApplication.Create(CompanyId.New(), "Dev", "https://jobs.example.com/1", null, null, WorkMode.Unknown, Now)
+            .IsSuccess.ShouldBeTrue();
 
     [Fact]
     public void Create_Valid_StartsInWishlistAndRaisesCreatedEvent()
